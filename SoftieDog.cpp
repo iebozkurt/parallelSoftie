@@ -3,6 +3,8 @@
 #include <string>
 #include <random>
 #include <ctime>
+#include <algorithm>
+#include <vector>
 
 class SoftieDog {
 private:
@@ -21,7 +23,7 @@ private:
     std::bitset<3> pawWebbedBits;
     std::bitset<6> dispositionBits;
 
-    static std::mt19937 rng; // Random number generator
+    
 
     // Helper to generate random bitset
     template<size_t N>
@@ -31,6 +33,7 @@ private:
     }
 
 public:
+    static std::mt19937 rng; // Random number generator
     // Static initializer for the random number generator
     static void initializeRNG() {
         rng.seed(static_cast<unsigned>(std::time(nullptr)));
@@ -46,6 +49,24 @@ public:
           backgroundColor(bgColor), foregroundBrightness(fgBrightness), foregroundColor(fgColor),
           pawColor(pColor), tailColor(tColor), tailLengthBits(tailLength), tailAppearance(tailApp),
           weightBits(weight), pawAreaBits(pawArea), pawWebbedBits(pawWebbed), dispositionBits(disposition) {}
+    
+    SoftieDog(unsigned long data) {
+        unsigned long mask = (1UL << 6) - 1; // Using 6 bits as the largest single field mask needed
+        dispositionBits = (data & ((1UL << 6) - 1)); data >>= 6;
+        pawWebbedBits = (data & ((1UL << 3) - 1)); data >>= 3;
+        pawAreaBits = (data & ((1UL << 7) - 1)); data >>= 7;
+        weightBits = (data & ((1UL << 10) - 1)); data >>= 10;
+        tailAppearance = (data & ((1UL << 2) - 1)); data >>= 2;
+        tailLengthBits = (data & ((1UL << 8) - 1)); data >>= 8;
+        tailColor = (data & ((1UL << 1) - 1)); data >>= 1;
+        pawColor = (data & ((1UL << 1) - 1)); data >>= 1;
+        foregroundColor = (data & ((1UL << 3) - 1)); data >>= 3;
+        foregroundBrightness = (data & ((1UL << 3) - 1)); data >>= 3;
+        backgroundColor = (data & ((1UL << 3) - 1)); data >>= 3;
+        backgroundBrightness = (data & ((1UL << 3) - 1)); data >>= 3;
+        coatSoftnessBits = (data & ((1UL << 6) - 1)); data >>= 6;
+        coatLengthBits = (data & ((1UL << 8) - 1)); // The remaining bits are for the coat length
+    }
 
     SoftieDog(bool randomize) {
         if (randomize) {
@@ -117,6 +138,25 @@ public:
         std::cout << "Disposition: " << getDisposition() << std::endl;
     }
 
+    unsigned long toUnsignedLong() const {
+        unsigned long data = 0;
+        data |= coatLengthBits.to_ulong(); data <<= 6;
+        data |= coatSoftnessBits.to_ulong(); data <<= 3;
+        data |= backgroundBrightness.to_ulong(); data <<= 3;
+        data |= backgroundColor.to_ulong(); data <<= 3;
+        data |= foregroundBrightness.to_ulong(); data <<= 3;
+        data |= foregroundColor.to_ulong(); data <<= 1;
+        data |= pawColor.to_ulong(); data <<= 1;
+        data |= tailColor.to_ulong(); data <<= 8;
+        data |= tailLengthBits.to_ulong(); data <<= 2;
+        data |= tailAppearance.to_ulong(); data <<= 10;
+        data |= weightBits.to_ulong(); data <<= 7;
+        data |= pawAreaBits.to_ulong(); data <<= 3;
+        data |= pawWebbedBits.to_ulong(); data <<= 6;
+        data |= dispositionBits.to_ulong();
+        return data;
+    }
+
     bool isSoftie() const {
         return (getCoatLength() >= 8 &&                    // Coat length 8 inches or more
                 coatSoftnessBits.to_ulong() <= 1 &&        // Extremely soft
@@ -131,6 +171,7 @@ public:
                 pawWebbedBits.to_ulong() == 7 &&           // Fully webbed toes
                 dispositionBits.to_ulong() <= 1);          // Extremely mild tempered
     }
+
 
     // Compute a fitness score based on Softie standards
     int softieFitness() const {
@@ -149,23 +190,129 @@ public:
         score += (dispositionBits.to_ulong() <= 1) ? 1 : 0;
         return score;
     }
+
+     void mutate() {
+        std::uniform_int_distribution<int> mutation_dist(0, 63); // For picking random bit positions
+        std::uniform_int_distribution<int> num_mutations_dist(1, 5); // For number of mutations
+        int num_mutations = num_mutations_dist(rng);
+        while (num_mutations--) {
+            int mutation_point = mutation_dist(rng);
+            if (mutation_point < 8) { // Mutate coatLengthBits
+                coatLengthBits.flip(mutation_point);
+            } else if (mutation_point < 14) { // Mutate coatSoftnessBits
+                coatSoftnessBits.flip(mutation_point - 8);
+            }  else if (mutation_point < 17) { // Mutate backgroundBrightness
+            backgroundBrightness.flip(mutation_point - 14);
+            } else if (mutation_point < 20) { // Mutate backgroundColor
+                backgroundColor.flip(mutation_point - 17);
+            } else if (mutation_point < 23) { // Mutate foregroundBrightness
+                foregroundBrightness.flip(mutation_point - 20);
+            } else if (mutation_point < 26) { // Mutate foregroundColor
+                foregroundColor.flip(mutation_point - 23);
+            } else if (mutation_point < 27) { // Mutate pawColor
+                pawColor.flip(mutation_point - 26);
+            } else if (mutation_point < 28) { // Mutate tailColor
+                tailColor.flip(mutation_point - 27);
+            } else if (mutation_point < 36) { // Mutate tailLengthBits
+                tailLengthBits.flip(mutation_point - 28);
+            } else if (mutation_point < 38) { // Mutate tailAppearance
+                tailAppearance.flip(mutation_point - 36);
+            } else if (mutation_point < 48) { // Mutate weightBits
+                weightBits.flip(mutation_point - 38);
+            } else if (mutation_point < 55) { // Mutate pawAreaBits
+                pawAreaBits.flip(mutation_point - 48);
+            } else if (mutation_point < 58) { // Mutate pawWebbedBits
+                pawWebbedBits.flip(mutation_point - 55);
+            } else if (mutation_point < 64) { // Mutate dispositionBits
+                dispositionBits.flip(mutation_point - 58);
+            }
+        }
+    }
 };
 
+
 std::mt19937 SoftieDog::rng;
+
+class BreedingProgram {
+    std::vector<SoftieDog> dogs;
+
+public:
+    BreedingProgram(int numDogs) {
+        // Initialize the dogs array with random dogs
+        dogs.reserve(numDogs);
+        for (int i = 0; i < numDogs; ++i) {
+            dogs.emplace_back(true); // Create random SoftieDog
+        }
+    }
+
+    void simulateGeneration() {
+        std::uniform_int_distribution<int> mate_dist(0, dogs.size() - 1);
+        std::uniform_int_distribution<int> litter_size_dist(4, 6);
+        std::vector<SoftieDog> newGeneration;
+
+        for (int i = 0; i < dogs.size(); ++i) {
+            int mate_index = mate_dist(SoftieDog::rng);
+            int litter_size = litter_size_dist(SoftieDog::rng);
+
+            for (int j = 0; j < litter_size; ++j) {
+                SoftieDog puppy(true); // Generate a random puppy
+                puppy.mutate(); // Mutate the puppy's genetic data
+                newGeneration.push_back(puppy);
+            }
+        }
+
+        // Combine old and new generations and keep only the top fittest
+         dogs.insert(dogs.end(), newGeneration.begin(), newGeneration.end());
+        std::nth_element(dogs.begin(), dogs.begin() + 500, dogs.end(), [](const SoftieDog& a, const SoftieDog& b) {
+            return a.softieFitness() > b.softieFitness();
+        });
+        dogs.resize(500); // Keep only the top 500 fittest dogs
+    }
+
+    void runSimulation(int generations) {
+        for (int i = 0; i < generations; ++i) {
+            simulateGeneration();
+            printFitnessLevels();
+            if (countSofties() >= 50) { // Assuming 500 dogs total, 10% is 50
+                std::cout << "Reached 10\% softies at generation " << i + 1 << std::endl;
+                break;
+            }
+        }
+    }
+
+    void printFitnessLevels() {
+        std::vector<int> fitnessLevels(13, 0); // Since the maximum fitness score is 12
+        float avg=0;
+        for (const auto& dog : dogs) {
+            int fitness = dog.softieFitness();
+            avg+= fitness;
+            if (fitness >= 0 && fitness < fitnessLevels.size()) {
+                 fitnessLevels[fitness]++;
+            }
+        }
+        avg/=500;
+        std::cout << "Fitness Average " << avg << std::endl;
+        for (size_t i = 0; i < fitnessLevels.size(); i++) {
+            std::cout << "Fitness Level " << i << ": " << fitnessLevels[i] << std::endl;
+        }
+    }
+
+    int countSofties() {
+        int softieCount = 0;
+        for (const auto& dog : dogs) {
+            if (dog.isSoftie()) {
+                softieCount++;
+            }
+        }
+        return softieCount;
+    }
+};
 
 int main() {
     SoftieDog::initializeRNG();
 
-    // Create an array of SoftieDog instances
-    const int numDogs = 500; // or 100 for each of five kennels
-    SoftieDog dogs[numDogs];
-
-    // Example usage: Display characteristics of the first few dogs to check randomness
-    for (int i = 0; i < 5; ++i) {
-        dogs[i].displayCharacteristics();
-        std::cout << "Is a Softie: " << (dogs[i].isSoftie() ? "Yes" : "No") << std::endl;
-        std::cout << "Softie Fitness Score: " << dogs[i].softieFitness() << std::endl;
-    }
+    BreedingProgram program(500); // 500 dogs in the breeding program
+    program.runSimulation(10000); // Run up to 100 generations or until 10% softies are reached
 
     return 0;
 }
