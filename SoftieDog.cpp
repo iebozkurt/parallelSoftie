@@ -5,6 +5,9 @@
 #include <ctime>
 #include <algorithm>
 #include <vector>
+#include <chrono>
+#include <climits>
+
 
 class SoftieDog {
 private:
@@ -22,7 +25,7 @@ private:
     std::bitset<7> pawAreaBits;
     std::bitset<3> pawWebbedBits;
     std::bitset<6> dispositionBits;
-
+    int age;
     
 
     // Helper to generate random bitset
@@ -36,9 +39,12 @@ public:
     static std::mt19937 rng; // Random number generator
     // Static initializer for the random number generator
     static void initializeRNG() {
-        rng.seed(static_cast<unsigned>(std::time(nullptr)));
+        auto hr_time = std::chrono::high_resolution_clock::now();
+        auto time_since_epoch = hr_time.time_since_epoch();
+        auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(time_since_epoch).count();
+        rng.seed(static_cast<unsigned>(millis));
     }
-    
+
     // Constructor
     SoftieDog(unsigned long coatLength = 0, unsigned long softness = 0, unsigned long bgBrightness = 0,
               unsigned long bgColor = 0, unsigned long fgBrightness = 0, unsigned long fgColor = 0,
@@ -48,9 +54,9 @@ public:
         : coatLengthBits(coatLength), coatSoftnessBits(softness), backgroundBrightness(bgBrightness),
           backgroundColor(bgColor), foregroundBrightness(fgBrightness), foregroundColor(fgColor),
           pawColor(pColor), tailColor(tColor), tailLengthBits(tailLength), tailAppearance(tailApp),
-          weightBits(weight), pawAreaBits(pawArea), pawWebbedBits(pawWebbed), dispositionBits(disposition) {}
+          weightBits(weight), pawAreaBits(pawArea), pawWebbedBits(pawWebbed), dispositionBits(disposition), age(0) {}
     
-    SoftieDog(unsigned long data) {
+    SoftieDog(int a ,unsigned long data) {
         unsigned long mask = (1UL << 6) - 1; // Using 6 bits as the largest single field mask needed
         dispositionBits = (data & ((1UL << 6) - 1)); data >>= 6;
         pawWebbedBits = (data & ((1UL << 3) - 1)); data >>= 3;
@@ -66,6 +72,7 @@ public:
         backgroundBrightness = (data & ((1UL << 3) - 1)); data >>= 3;
         coatSoftnessBits = (data & ((1UL << 6) - 1)); data >>= 6;
         coatLengthBits = (data & ((1UL << 8) - 1)); // The remaining bits are for the coat length
+        age =0;
     }
 
     SoftieDog(bool randomize) {
@@ -85,6 +92,7 @@ public:
             pawWebbedBits = generateRandomBitset<3>();
             dispositionBits = generateRandomBitset<6>();
         }
+        age = 0;
     }
 
     // Setters
@@ -102,7 +110,9 @@ public:
     void setPawArea(unsigned long area) { pawAreaBits = area; }
     void setPawWebbed(unsigned long webbed) { pawWebbedBits = webbed; }
     void setDisposition(unsigned long disposition) { dispositionBits = disposition; }
-
+    
+    void incrementAge(){age+=1;}
+    bool isReadyToDie(){if( age >3) return true; return false;}
     // Getters
     unsigned long getCoatLength() const { return coatLengthBits.to_ulong(); }
     unsigned long getCoatSoftness() const { return coatSoftnessBits.to_ulong(); }
@@ -118,7 +128,7 @@ public:
     unsigned long getPawArea() const { return pawAreaBits.to_ulong(); }
     unsigned long getPawWebbed() const { return pawWebbedBits.to_ulong(); }
     unsigned long getDisposition() const { return dispositionBits.to_ulong(); }
-
+    int getAge() const { return age;}
     // Display the dog's characteristics
     void displayCharacteristics() const {
         std::cout << "Softie Dog Characteristics: " << std::endl;
@@ -191,10 +201,10 @@ public:
         return score;
     }
 
-     void mutate() {
+     void mutate(int i) {
         std::uniform_int_distribution<int> mutation_dist(0, 63); // For picking random bit positions
-        std::uniform_int_distribution<int> num_mutations_dist(1, 5); // For number of mutations
-        int num_mutations = num_mutations_dist(rng);
+        std::uniform_int_distribution<int> num_mutations_dist(0,3 ); // For number of mutations
+        int num_mutations = num_mutations_dist(rng)+i;
         while (num_mutations--) {
             int mutation_point = mutation_dist(rng);
             if (mutation_point < 8) { // Mutate coatLengthBits
@@ -235,32 +245,54 @@ std::mt19937 SoftieDog::rng;
 
 class BreedingProgram {
     std::vector<SoftieDog> dogs;
+    // std::vector<int> numbers;
+    std::uniform_int_distribution<int> litter_size_dist;
+    std::uniform_int_distribution<unsigned long> dist;
 
 public:
     BreedingProgram(int numDogs) {
+        litter_size_dist = std::uniform_int_distribution<int>(2, 5); // number of litter
+        dist = std::uniform_int_distribution<unsigned long>(0, ULONG_MAX); // genetic random
         // Initialize the dogs array with random dogs
         dogs.reserve(numDogs);
         for (int i = 0; i < numDogs; ++i) {
             dogs.emplace_back(true); // Create random SoftieDog
         }
+        // for (int i = 0; i < (int)(dogs.size()) ; i++) {
+        // numbers.push_back(i);  // Add number to vector
+        // }
     }
 
-    void simulateGeneration() {
-        std::uniform_int_distribution<int> mate_dist(0, dogs.size() - 1);
-        std::uniform_int_distribution<int> litter_size_dist(4, 6);
+    void simulateGeneration() {        
         std::vector<SoftieDog> newGeneration;
+        std::uniform_int_distribution<int> mate(1,dogs.size()-1);
+        // unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        // std::default_random_engine engine(seed);
+        // std::shuffle(numbers.begin(), numbers.end(), engine);
+        
 
         for (int i = 0; i < dogs.size(); ++i) {
-            int mate_index = mate_dist(SoftieDog::rng);
+            dogs[i].incrementAge();
+            int mate_index = (i + mate(SoftieDog::rng))%dogs.size();
             int litter_size = litter_size_dist(SoftieDog::rng);
-
+            unsigned long l = dist(SoftieDog::rng);
+            unsigned long n ,c =0;
+            c = ~c;
+            n = l ^c;
             for (int j = 0; j < litter_size; ++j) {
-                SoftieDog puppy(true); // Generate a random puppy
-                puppy.mutate(); // Mutate the puppy's genetic data
+                c = (dogs[i].toUnsignedLong() & l) | (dogs[mate_index].toUnsignedLong() & n );
+                SoftieDog puppy(0,c);
+                puppy.mutate(dogs[i].getAge()-1); // Mutate the puppy's genetic data
                 newGeneration.push_back(puppy);
             }
         }
-
+        
+        for (int i = 0; i < dogs.size(); ++i) {
+            if(dogs[i].isReadyToDie()){
+                dogs.erase(dogs.begin()+i);
+                std::cout << "dead dog index" << i << std::endl;
+                }
+        }
         // Combine old and new generations and keep only the top fittest
          dogs.insert(dogs.end(), newGeneration.begin(), newGeneration.end());
         std::nth_element(dogs.begin(), dogs.begin() + 500, dogs.end(), [](const SoftieDog& a, const SoftieDog& b) {
@@ -310,9 +342,9 @@ public:
 
 int main() {
     SoftieDog::initializeRNG();
-
+    
     BreedingProgram program(500); // 500 dogs in the breeding program
-    program.runSimulation(10000); // Run up to 100 generations or until 10% softies are reached
+    program.runSimulation(100000); // Run up to 100 generations or until 10% softies are reached
 
     return 0;
 }
