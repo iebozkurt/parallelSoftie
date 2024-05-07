@@ -292,7 +292,7 @@ public:
             dogs[i].incrementAge();
             if(dogs[i].isReadyToDie()){
                 dogs.erase(dogs.begin()+i);
-                std::cout << "dead dog index" << i << std::endl;
+                // std::cout << "dead dog index" << i << std::endl;
                 }
         }
         // Combine old and new generations and keep only the top fittest
@@ -306,7 +306,7 @@ public:
     void runSimulation(int generations) {
         for (int i = 0; i < generations; ++i) {
             simulateGeneration();
-            printFitnessLevels();
+            // printFitnessLevels();
             if (countSofties() >= 50) { // Assuming 500 dogs total, 10% is 50
                 std::cout << "Reached 10\% softies at generation " << i + 1 << std::endl;
                 break;
@@ -343,10 +343,16 @@ public:
 };
 
 int main() {
-
+    auto start = std::chrono::high_resolution_clock::now();
+    
     SoftieDog::initializeRNG();
     BreedingProgram program(500); // 500 dogs in the breeding program
     program.runSimulation(1000); // Run up to 100 generations or until 10% softies are reached
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+    std::cout << "Elapsed time: " << duration << " microseconds" << std::endl;
 
     return 0;
 }

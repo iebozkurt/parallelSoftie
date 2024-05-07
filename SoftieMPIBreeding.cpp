@@ -9,6 +9,7 @@
 #include <chrono>
 #include <climits>
 #include <mpi.h>
+#include <omp.h>
 
 class SoftieDog
 {
@@ -342,7 +343,7 @@ public:
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         std::default_random_engine engine(seed);
         std::shuffle(numbers.begin(), numbers.end(), engine);
-
+        
         for (int i = 0; i < dogs.size() / 2; ++i)
         {
 
@@ -458,12 +459,15 @@ int main(int argc, char *argv[])
         MPI_Abort(MPI_COMM_WORLD, 0);
     }
     MPI_Barrier(MPI_COMM_WORLD);
+    auto start = std::chrono::high_resolution_clock::now();
+
     SoftieDog::initializeRNG();
     BreedingProgram program(100); // 100 dogs in the breeding program
     // count then check then breed then send
     gen = 0;
     while (1)
-    {
+    {   
+
         count = program.countSofties();
         MPI_Allreduce(&count, &incoming, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
         if (incoming >= 50)
@@ -476,18 +480,16 @@ int main(int argc, char *argv[])
         MPI_Send(sendDog + 1, 1, MPI_UNSIGNED_LONG, (rank - 1 + size) % size, 1, MPI_COMM_WORLD);
         MPI_Recv(getDog, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
         MPI_Recv(getDog + 1, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
-        program.addDogs(getDog[0], getDog[1]);
-        // if (rank == 0){
-        //     printf("gens: %d %d \n", gen,count);
-        // }
-        if(gen == 100 )
-        break;
-        
-        
+        program.addDogs(getDog[0], getDog[1]);    
     }
-    if (rank ==0 )
-        printf("gens: %d", gen);
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+    if (rank ==0 ){
+        printf("gens: %d", gen);
+        std::cout << "Elapsed time: " << duration << " microseconds" << std::endl;
+    }
     MPI_Finalize();              // Finalize the MPI environment
     return 0;
 }
