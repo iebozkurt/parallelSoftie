@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <bitset>
 #include <string>
 #include <random>
@@ -386,29 +387,24 @@ public:
         dogs.erase(dogs.begin(), dogs.begin() + 2); // Remove the two fittest dogs from the main population
     }
 
-    void runSimulation(int generations)
-    {
-        for (int i = 0; i < generations; ++i)
-        {
-            simulateGeneration();
-            printFitnessLevels();
-            if (countSofties() >= 50)
-            { // Assuming 500 dogs total, 10% is 50
-                std::cout << "Reached 10\% softies at generation " << i + 1 << std::endl;
-                break;
-            }
-        }
-    }
+    // void runSimulation(int generations)
+    // {
+    //     for (int i = 0; i < generations; ++i)
+    //     {
+    //         simulateGeneration();
+    //         printFitnessLevels();
+    //         if (countSofties() >= 50)
+    //         { // Assuming 500 dogs total, 10% is 50
+    //             std::cout << "Reached 10\% softies at generation " << i + 1 << std::endl;
+    //             break;
+    //         }
+    //     }
+    // }
 
     void addDogs(unsigned long a, unsigned long b) {
-    if (newDogs.size() != 2) {
-        std::cerr << "Error: Exactly two dogs must be provided to add to the population." << std::endl;
-        return;
-    }
-
     // Add new dogs to the population
-    dogs.push_back(SoftieDog ad(0,a));
-    dogs.push_back(SoftieDog bd(0,b));
+    dogs.push_back(new SoftieDog(0,a));
+    dogs.push_back(new SoftieDog(0,b));
     }
 
     void printFitnessLevels()
@@ -449,16 +445,16 @@ public:
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv); // Initialize the MPI environment
-
     int size, rank, incoming, gen, count;
     std::vector<SoftieDog> b2(2);
     unsigned long *sendDog = new unsigned long[2];
     unsigned long *getDog = new unsigned long[2];
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size); // Get the number of processes
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank); // Get the rank of the process
+    MPI_Comm_size(MPI_COMM_WORLD, &size); // Get the number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Get the rank of the process
+    printf("hello");
     if (rank = 0 && size != 5)
     {
-        cout << "There must have 5 processes" << endl;
+        printf("There must be 5 processes\n");
         MPI_Abort(MPI_COMM_WORLD, 0);
     }
     MPI_Barrier(MPI_COMM_WORLD);
@@ -468,23 +464,24 @@ int main(int argc, char *argv[])
     gen = 0;
     while (1)
     {
-        count = program.countSofties()
-                    MPI_Allreduce(&count, &incoming, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        count = program.countSofties();
+        MPI_Allreduce(&count, &incoming, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
         if (incoming >= 50)
             break;
         program.simulateGeneration(b2);
         gen++;
         sendDog[0] = b2[0].toUnsignedLong();
         sendDog[1] = b2[1].toUnsignedLong();
-        MPI_Send(sendDog, 1, MPI_UNSIGNED_LONG, (rank + 1) % size, MPI_ANY_TAG, MPI_COMM_WORLD);
-        MPI_Send(sendDog + 1, 1, MPI_UNSIGNED_LONG, (rank - 1) % size, MPI_ANY_TAG, MPI_COMM_WORLD);
-        MPI_Recv(getDog, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD);
-        MPI_Recv(getDog + 1, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD)
+        MPI_Send(sendDog, 1, MPI_UNSIGNED_LONG, (rank + 1) % size, 1, MPI_COMM_WORLD);
+        MPI_Send(sendDog + 1, 1, MPI_UNSIGNED_LONG, (rank - 1 + size) % size, 1, MPI_COMM_WORLD);
+        MPI_Recv(getDog, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
+        MPI_Recv(getDog + 1, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
         program.addDogs(getDog[0], getDog[1]);
+        printf("gens: %d", gen);
     }
     if (rank ==0 )
-        cout<< gen << endl;
-    
+        printf("gens: %d", gen);
+
     MPI_Finalize();              // Finalize the MPI environment
     return 0;
 }
