@@ -383,7 +383,7 @@ public:
             twoFittestDogs.push_back(dogs[1]);
         }
 
-        dogs.resize(10);
+        dogs.resize(100);
         dogs.erase(dogs.begin(), dogs.begin() + 2); // Remove the two fittest dogs from the main population
     }
 
@@ -451,8 +451,8 @@ int main(int argc, char *argv[])
     unsigned long *getDog = new unsigned long[2];
     MPI_Comm_size(MPI_COMM_WORLD, &size); // Get the number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Get the rank of the process
-    printf("hello");
-    if (rank = 0 && size != 5)
+    // printf("hello");
+    if (rank == 0 && size != 5)
     {
         printf("There must be 5 processes\n");
         MPI_Abort(MPI_COMM_WORLD, 0);
@@ -477,7 +477,13 @@ int main(int argc, char *argv[])
         MPI_Recv(getDog, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
         MPI_Recv(getDog + 1, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
         program.addDogs(getDog[0], getDog[1]);
-        printf("gens: %d", gen);
+        if (rank == 0){
+            printf("gens: %d %d \n", gen,count);
+        }
+        if(gen == 100 )
+        break;
+        
+        
     }
     if (rank ==0 )
         printf("gens: %d", gen);
