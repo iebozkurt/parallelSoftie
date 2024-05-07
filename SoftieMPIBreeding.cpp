@@ -367,7 +367,7 @@ public:
             if (dogs[i].isReadyToDie())
             {
                 dogs.erase(dogs.begin() + i);
-                std::cout << "dead dog index" << i << std::endl;
+                // std::cout << "dead dog index" << i << std::endl;
                 i--; // Ensure we don't skip the next dog
             }
         }
@@ -477,9 +477,9 @@ int main(int argc, char *argv[])
         MPI_Recv(getDog, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
         MPI_Recv(getDog + 1, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, NULL);
         program.addDogs(getDog[0], getDog[1]);
-        if (rank == 0){
-            printf("gens: %d %d \n", gen,count);
-        }
+        // if (rank == 0){
+        //     printf("gens: %d %d \n", gen,count);
+        // }
         if(gen == 100 )
         break;
         
