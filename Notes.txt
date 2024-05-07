@@ -1,0 +1,2 @@
+single 13000 median
+mpi only 7000
