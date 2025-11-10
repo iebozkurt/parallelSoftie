@@ -1,3 +1,5 @@
+[![Chat-GPT-Image-Nov-10-2025-02-55-04-PM.png](https://i.postimg.cc/sDH2HF44/Chat-GPT-Image-Nov-10-2025-02-55-04-PM.png)](https://postimg.cc/fJXZkrFV)
+
 # parallelSoftie
 
 parallelSoftie is a playground for experimenting with a "Softie" dog breeding simulation that is implemented in three ways: a sequential baseline, an MPI-only variant, and a hybrid MPI + OpenMP version. Each simulation evolves bitset-encoded dog genomes across generations until at least 10% of the population qualifies as a "softie" according to several visual and personality traits.
